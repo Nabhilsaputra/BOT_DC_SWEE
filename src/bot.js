@@ -1,18 +1,3 @@
-/**
- * src/bot.js
- * Discord bot: mengirim log real-time & melayani slash commands.
- *
- * Slash commands:
- *   /qr <nama_atlet>    — Tampilkan QR code atlet (bisa sebagian nama)
- *   /rekap              — Rekap absensi hari ini (per coach & kelas)
- *   /rekap-bulanan      — Rekap ringkasan bulan ini (opsional: bulan & tahun)
- *   /rekap-coach <nama> — Rekap hari ini untuk satu coach
- *   /hadir              — Ringkasan cepat jumlah hadir
- *   /riwayat <nama>     — Riwayat kehadiran atlet (30 sesi terakhir)
- *   /atlet              — Daftar semua atlet terdaftar
- *   /bantuan            — Daftar semua perintah
- */
-
 require("dotenv").config();
 
 const {
