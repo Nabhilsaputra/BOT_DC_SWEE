@@ -27,6 +27,7 @@ const {
 
 const path = require("path");
 const fs   = require("fs");
+const archiver = require("archiver");
 const db   = require("./db");
 const { generateQrForAthlete, QR_DIR } = require("./qr-generator");
 const { generateRekapSheet }            = require("./sheets");
@@ -107,6 +108,11 @@ async function registerCommands() {
          .setDescription("Nama atlet atau kode atlet (mis. ATL001 atau Budi)")
          .setRequired(true)),
 
+    // /qr-zip
+    new SlashCommandBuilder()
+      .setName("qr-zip")
+      .setDescription("Download semua QR atlet dalam file ZIP"),
+    
     // /rekap
     new SlashCommandBuilder()
       .setName("rekap")
@@ -208,7 +214,7 @@ client.once("ready", async () => {
 
   // Rekap otomatis jam 19:00 WIB
   cron.schedule(
-    "08 13 * * *",
+    "00 19 * * *",
     async () => {
       try {
         console.log("📋 Menjalankan rekap otomatis...");
@@ -671,6 +677,81 @@ ${result.tabs.map(t => `• ${t}`).join("\n")}`
       .setTimestamp();
 
     return interaction.editReply({ embeds: [embed] });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // /qr-zip
+  // ══════════════════════════════════════════════════════════════════════════
+  if (commandName === "qr-zip") {
+    await interaction.deferReply();
+  
+    try {
+      const athletes = await db.listAthletes();
+  
+      if (!athletes.length) {
+        return interaction.editReply(
+          "❌ Tidak ada atlet terdaftar."
+        );
+      }
+  
+      for (const athlete of athletes) {
+        const qrFile = path.join(
+          QR_DIR,
+          `${athlete.athlete_code}.png`
+        );
+  
+        if (!fs.existsSync(qrFile)) {
+          await generateQrForAthlete(
+            athlete.athlete_code,
+            athlete.name
+          );
+        }
+      }
+  
+      const zipName = `QR_Atlet_${Date.now()}.zip`;
+      const zipPath = path.join(process.cwd(), zipName);
+  
+      const output = fs.createWriteStream(zipPath);
+  
+      const archive = archiver("zip", {
+        zlib: { level: 9 },
+      });
+  
+      archive.pipe(output);
+  
+      for (const athlete of athletes) {
+        const qrFile = path.join(
+          QR_DIR,
+          `${athlete.athlete_code}.png`
+        );
+  
+        archive.file(qrFile, {
+          name: `${athlete.athlete_code} - ${athlete.name}.png`,
+        });
+      }
+  
+      await archive.finalize();
+  
+      await new Promise(resolve =>
+        output.on("close", resolve)
+      );
+  
+      const attachment = new AttachmentBuilder(zipPath);
+  
+      await interaction.editReply({
+        content: `✅ ${athletes.length} QR berhasil dibuat`,
+        files: [attachment],
+      });
+  
+      fs.unlinkSync(zipPath);
+  
+    } catch (err) {
+      console.error(err);
+  
+      await interaction.editReply(
+        `❌ Gagal membuat ZIP: ${err.message}`
+      );
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
