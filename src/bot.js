@@ -727,7 +727,7 @@ async function sendAutoRekapToOwner() {
       
       ` +
         `**Tab yang dibuat:**
-${result.tabs.map(t => `• ${t}`).join("\n")}
+${result.tabs.map(t => `• ${t}`).join("\n")}`
       )
       .addFields({ name: "🔗 Buka Sheets", value: result.url })
       .setTimestamp()
