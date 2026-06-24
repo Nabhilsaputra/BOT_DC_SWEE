@@ -88,12 +88,23 @@ async function writeRekapToSheet(sheets, tabName, sheetId, coachName, year, mont
   for (let d = 1; d <= totalDays; d++) {
     dataPerTgl[d] = { Pemula: 0, Lanjutan: 0, Prestasi: 0 };
   }
+  console.log("=== ATTENDANCE ROWS ===");
+  
   for (const r of attendanceRows) {
+    console.log({
+      coach: r.coach,
+      kelas: r.kelas,
+      tanggal: r.tanggal,
+    });
+  
     const tgl = new Date(r.tanggal + "T12:00:00Z").getDate();
+  
     if (dataPerTgl[tgl] && KELAS_LIST.includes(r.kelas)) {
       dataPerTgl[tgl][r.kelas]++;
     }
   }
+  
+  console.log(dataPerTgl);
 
   // ── Hitung total per kelas ──
   const totalPerKelas = { Pemula: 0, Lanjutan: 0, Prestasi: 0 };
