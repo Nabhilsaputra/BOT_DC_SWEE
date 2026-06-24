@@ -508,7 +508,7 @@ async function sendAttendanceLog({ name, code, coach, kelas, isDuplicate }) {
     if (!channel) return;
 
     const jam = new Date().toLocaleTimeString("id-ID", {
-      hour: "2-digit", minute: "2-digit",
+      hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta",
     });
 
     const embed = new EmbedBuilder()
