@@ -34,7 +34,12 @@ const cron                              = require("node-cron");
 
 // ─── Inisialisasi client ──────────────────────────────────────────────────────
 
-const client  = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+  ],
+});
 let botReady  = false;
 
 // ─── Helpers format ───────────────────────────────────────────────────────────
@@ -199,9 +204,64 @@ async function registerCommands() {
 client.once("ready", async () => {
   botReady = true;
   console.log(`🤖 Bot aktif sebagai ${client.user.tag}`);
+
   await registerCommands().catch(e =>
     console.error("Gagal daftarkan commands:", e.message)
   );
+
+  // Rekap otomatis jam 19:00 WIB
+  cron.schedule(
+    "54 12 * * *",
+    async () => {
+      try {
+        console.log("📋 Menjalankan rekap otomatis...");
+
+        const channel = await client.channels.fetch(
+          "1518831311081574450"
+        );
+
+        if (!channel) {
+          console.error("❌ Channel tidak ditemukan");
+          return;
+        }
+
+        const rows = await db.getTodayAttendance();
+
+        if (!rows.length) {
+          await channel.send(
+            "📋 Rekap Absensi Hari Ini\n\nBelum ada absensi hari ini."
+          );
+          return;
+        }
+
+        let msg = "📋 **Rekap Absensi Hari Ini**\n\n";
+
+        rows.forEach((r, i) => {
+          const jam = new Date(r.scan_time)
+            .toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "Asia/Jakarta",
+            });
+
+          msg += `${i + 1}. ${r.name} — ${r.athlete_code} — ${jam}\n`;
+        });
+
+        msg += `\n👥 Total hadir: ${rows.length} atlet`;
+
+        await channel.send(msg);
+
+        console.log("✅ Rekap otomatis terkirim.");
+      } catch (err) {
+        console.error("❌ Gagal kirim rekap otomatis:", err);
+      }
+    },
+    {
+      timezone: "Asia/Jakarta",
+    }
+  );
+
+  console.log("⏰ Rekap otomatis aktif (19:00 WIB)");
 });
 
 // ─── Event: interactionCreate ─────────────────────────────────────────────────
