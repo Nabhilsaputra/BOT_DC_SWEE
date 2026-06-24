@@ -29,6 +29,8 @@ const path = require("path");
 const fs   = require("fs");
 const db   = require("./db");
 const { generateQrForAthlete, QR_DIR } = require("./qr-generator");
+const { generateRekapSheet }            = require("./sheets");
+const cron                              = require("node-cron");
 
 // ─── Inisialisasi client ──────────────────────────────────────────────────────
 
@@ -55,8 +57,10 @@ function formatJam(isoString) {
   });
 }
 
+// Konversi nilai tanggal dari PostgreSQL (bisa Date object atau string) ke Date WIB
 function parseTanggal(tgl) {
   if (tgl instanceof Date) return tgl;
+  // Format YYYY-MM-DD → parse sebagai UTC tengah hari supaya tidak geser hari
   return new Date(tgl + "T12:00:00Z");
 }
 
@@ -147,10 +151,16 @@ async function registerCommands() {
       .setName("atlet")
       .setDescription("Daftar semua atlet yang terdaftar dalam sistem"),
 
-    // /hadir-bulan
+    // /bantuan
+    // /rekap-sheet
     new SlashCommandBuilder()
-      .setName("hadir-bulan")
-      .setDescription("Ringkasan jumlah kehadiran per atlet dalam satu bulan")
+      .setName("rekap-sheet")
+      .setDescription("Generate rekap absensi ke Google Sheets (tanggal 1 s/d hari ini)"),
+
+    // /rekap-sheet-bulan
+    new SlashCommandBuilder()
+      .setName("rekap-sheet-bulan")
+      .setDescription("Generate rekap absensi bulan tertentu ke Google Sheets")
       .addIntegerOption(o =>
         o.setName("bulan")
          .setDescription("Nomor bulan 1–12 (default: bulan ini)")
@@ -160,7 +170,19 @@ async function registerCommands() {
          .setDescription("Tahun (default: tahun ini)")
          .setMinValue(2020).setMaxValue(2100).setRequired(false)),
 
-    // /bantuan
+    // /hadir-bulan
+    new SlashCommandBuilder()
+      .setName("hadir-bulan")
+      .setDescription("Ranking kehadiran atlet dalam satu bulan")
+      .addIntegerOption(o =>
+        o.setName("bulan")
+         .setDescription("Nomor bulan 1–12 (default: bulan ini)")
+         .setMinValue(1).setMaxValue(12).setRequired(false))
+      .addIntegerOption(o =>
+        o.setName("tahun")
+         .setDescription("Tahun (default: tahun ini)")
+         .setMinValue(2020).setMaxValue(2100).setRequired(false)),
+
     new SlashCommandBuilder()
       .setName("bantuan")
       .setDescription("Tampilkan daftar perintah yang tersedia"),
@@ -468,6 +490,77 @@ client.on("interactionCreate", async interaction => {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // /rekap-sheet
+  // ══════════════════════════════════════════════════════════════════════════
+  if (commandName === "rekap-sheet") {
+    await interaction.deferReply();
+    const now   = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    const year  = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const today = now.getDate();
+
+    const rows = await db.getMonthlyAttendance(year, month);
+    if (!rows.length) {
+      return interaction.editReply(`📊 Belum ada data absensi untuk ${BULAN_ID[month]} ${year}.`);
+    }
+
+    try {
+      const result = await generateRekapSheet(rows, year, month, today);
+      const embed = new EmbedBuilder()
+        .setColor(0x10b981)
+        .setTitle("📊 Rekap Sheet Berhasil Dibuat")
+        .setDescription(
+          `Rekap absensi **1–${today} ${BULAN_ID[month]} ${year}** sudah masuk ke Google Sheets.
+
+` +
+          `**Tab yang dibuat/diperbarui:**
+${result.tabs.map(t => `• ${t}`).join("\n")}`
+        )
+        .addFields({ name: "🔗 Buka Sheets", value: result.url })
+        .setTimestamp();
+      return interaction.editReply({ embeds: [embed] });
+    } catch (err) {
+      console.error("[/rekap-sheet]", err);
+      return interaction.editReply(`❌ Gagal generate sheet: ${err.message}`);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // /rekap-sheet-bulan
+  // ══════════════════════════════════════════════════════════════════════════
+  if (commandName === "rekap-sheet-bulan") {
+    await interaction.deferReply();
+    const bulan = interaction.options.getInteger("bulan") || new Date().getMonth() + 1;
+    const tahun = interaction.options.getInteger("tahun") || new Date().getFullYear();
+    const rows  = await db.getMonthlyAttendance(tahun, bulan);
+    const label = `${BULAN_ID[bulan]} ${tahun}`;
+
+    if (!rows.length) {
+      return interaction.editReply(`📊 Tidak ada data absensi untuk ${label}.`);
+    }
+
+    try {
+      const result = await generateRekapSheet(rows, tahun, bulan);
+      const embed = new EmbedBuilder()
+        .setColor(0x7c3aed)
+        .setTitle(`📊 Rekap Sheet — ${label}`)
+        .setDescription(
+          `Rekap absensi **${label}** sudah masuk ke Google Sheets.
+
+` +
+          `**Tab yang dibuat/diperbarui:**
+${result.tabs.map(t => `• ${t}`).join("\n")}`
+        )
+        .addFields({ name: "🔗 Buka Sheets", value: result.url })
+        .setTimestamp();
+      return interaction.editReply({ embeds: [embed] });
+    } catch (err) {
+      console.error("[/rekap-sheet-bulan]", err);
+      return interaction.editReply(`❌ Gagal generate sheet: ${err.message}`);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // /hadir-bulan
   // ══════════════════════════════════════════════════════════════════════════
   if (commandName === "hadir-bulan") {
@@ -476,12 +569,11 @@ client.on("interactionCreate", async interaction => {
     const tahun = interaction.options.getInteger("tahun") || new Date().getFullYear();
     const rows  = await db.getMonthlyAttendance(tahun, bulan);
     const label = `${BULAN_ID[bulan]} ${tahun}`;
-  
+
     if (!rows.length) {
       return interaction.editReply(`📅 Tidak ada data kehadiran untuk ${label}.`);
     }
-  
-    // Hitung kehadiran per atlet
+
     const perAtlet = {};
     for (const r of rows) {
       const key = r.athlete_code;
@@ -491,18 +583,14 @@ client.on("interactionCreate", async interaction => {
       perAtlet[key].total++;
       perAtlet[key].kelas[r.kelas] = (perAtlet[key].kelas[r.kelas] || 0) + 1;
     }
-  
-    // Urutkan dari kehadiran terbanyak
+
     const sorted = Object.values(perAtlet).sort((a, b) => b.total - a.total);
-  
-    const lines = sorted.map((a, i) => {
-      const kelasList = Object.entries(a.kelas)
-        .map(([k, n]) => `${k}: ${n}x`)
-        .join(", ");
+    const lines  = sorted.map((a, i) => {
+      const kelasList = Object.entries(a.kelas).map(([k, n]) => `${k}: ${n}x`).join(", ");
       const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
       return `${medal} **${a.name}** — ${a.total}x hadir _(${kelasList})_`;
     });
-  
+
     const embed = new EmbedBuilder()
       .setColor(0x0ea5e9)
       .setTitle(`🏊 Kehadiran Bulanan — ${label}`)
@@ -513,7 +601,7 @@ client.on("interactionCreate", async interaction => {
       )
       .setFooter({ text: "Diurutkan dari kehadiran terbanyak" })
       .setTimestamp();
-  
+
     return interaction.editReply({ embeds: [embed] });
   }
 
@@ -551,9 +639,6 @@ client.on("interactionCreate", async interaction => {
           "`/riwayat <nama>`",
           "Riwayat kehadiran satu atlet (30 sesi terakhir).",
           "",
-          "`/hadir-bulan [bulan] [tahun]`",
-          "Ranking kehadiran atlet dalam satu bulan.",
-          "",
           "`/bantuan`",
           "Tampilkan pesan ini.",
         ].join("\n")
@@ -574,7 +659,7 @@ async function sendAttendanceLog({ name, code, coach, kelas, isDuplicate }) {
     if (!channel) return;
 
     const jam = new Date().toLocaleTimeString("id-ID", {
-      hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta",
+      hour: "2-digit", minute: "2-digit",
     });
 
     const embed = new EmbedBuilder()
@@ -594,6 +679,95 @@ async function sendAttendanceLog({ name, code, coach, kelas, isDuplicate }) {
   }
 }
 
+// ─── Kirim rekap sheet otomatis ke Owner ─────────────────────────────────────
+
+async function sendAutoRekapToOwner() {
+  if (!botReady) return;
+
+  try {
+    const now   = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    const year  = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const label = `${BULAN_ID[month]} ${year}`;
+
+    console.log(`[CRON] Mengirim rekap sheet ${label} ke Owner...`);
+
+    // Ambil data bulan ini
+    const rows = await db.getMonthlyAttendance(year, month);
+    if (!rows.length) {
+      console.log(`[CRON] Tidak ada data untuk ${label}, skip.`);
+      return;
+    }
+
+    // Generate sheet
+    const result = await generateRekapSheet(rows, year, month);
+
+    // Cari semua member dengan role Owner
+    const guildId = process.env.DISCORD_GUILD_ID;
+    if (!guildId) {
+      console.log("[CRON] DISCORD_GUILD_ID belum diset, skip kirim PM.");
+      return;
+    }
+
+    const guild     = await client.guilds.fetch(guildId);
+    const ownerRole = guild.roles.cache.find(r => r.name.toLowerCase() === "owner");
+    if (!ownerRole) {
+      console.log("[CRON] Role 'owner' tidak ditemukan di server.");
+      return;
+    }
+
+    await guild.members.fetch();
+    const owners = guild.members.cache.filter(m => m.roles.cache.has(ownerRole.id));
+
+    const embed = new EmbedBuilder()
+      .setColor(0x7c3aed)
+      .setTitle(`📊 Rekap Bulanan Otomatis — ${label}`)
+      .setDescription(
+        `Rekap absensi bulan **${label}** sudah otomatis ter-generate ke Google Sheets.
+
+` +
+        `**Tab yang dibuat:**
+${result.tabs.map(t => `• ${t}`).join("
+")}`
+      )
+      .addFields({ name: "🔗 Buka Sheets", value: result.url })
+      .setTimestamp()
+      .setFooter({ text: "Dikirim otomatis tiap akhir bulan jam 19.00 WIB" });
+
+    for (const [, member] of owners) {
+      try {
+        await member.send({ embeds: [embed] });
+        console.log(`[CRON] PM terkirim ke ${member.user.tag}`);
+      } catch (e) {
+        console.error(`[CRON] Gagal PM ke ${member.user.tag}:`, e.message);
+      }
+    }
+
+  } catch (err) {
+    console.error("[CRON] Gagal auto rekap sheet:", err.message);
+  }
+}
+
+// ─── Cron: akhir bulan jam 19.00 WIB ────────────────────────────────────────
+// Cron: detik menit jam tanggal bulan
+// "0 19 28-31 * *" → tiap tanggal 28–31 jam 12.00 UTC (= 19.00 WIB)
+// Dicek tambahan: hanya jalan kalau besok sudah bulan baru (= hari terakhir bulan)
+
+function startCron() {
+  cron.schedule("0 12 28-31 * *", async () => {
+    const now      = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Jalankan hanya kalau hari ini adalah hari terakhir bulan
+    if (tomorrow.getMonth() !== now.getMonth()) {
+      console.log("[CRON] Hari terakhir bulan — kirim rekap otomatis.");
+      await sendAutoRekapToOwner();
+    }
+  }, { timezone: "UTC" });
+
+  console.log("✅ Cron rekap bulanan aktif (akhir bulan 19.00 WIB).");
+}
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 function startBot() {
@@ -601,6 +775,7 @@ function startBot() {
     console.log("⚠️  DISCORD_TOKEN tidak ditemukan — bot Discord dinonaktifkan.");
     return Promise.resolve();
   }
+  startCron();
   return client.login(process.env.DISCORD_TOKEN);
 }
 
