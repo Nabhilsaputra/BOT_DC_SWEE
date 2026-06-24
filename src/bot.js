@@ -808,9 +808,11 @@ async function sendAttendanceLog({ name, code, coach, kelas, isDuplicate }) {
     if (!channel) return;
 
     const jam = new Date().toLocaleTimeString("id-ID", {
-      hour: "2-digit", minute: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Jakarta",
     });
-
+    
     const embed = new EmbedBuilder()
       .setColor(isDuplicate ? 0xf59e0b : 0x10b981)
       .setTitle(isDuplicate ? "⚠️ Sudah Absen Sebelumnya" : "✅ Atlet Hadir")
