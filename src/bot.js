@@ -208,7 +208,7 @@ client.once("ready", async () => {
 
   // Rekap otomatis jam 19:00 WIB
   cron.schedule(
-    "01 13 * * *",
+    "08 13 * * *",
     async () => {
       try {
         console.log("📋 Menjalankan rekap otomatis...");
