@@ -223,30 +223,41 @@ client.once("ready", async () => {
         }
 
         const rows = await db.getTodayAttendance();
-
+        
         if (!rows.length) {
-          await channel.send(
-            "📋 Rekap Absensi Hari Ini\n\nBelum ada absensi hari ini."
-          );
+          await channel.send("📋 Belum ada atlet yang absen hari ini.");
           return;
         }
-
-        let msg = "📋 **Rekap Absensi Hari Ini**\n\n";
-
-        rows.forEach((r, i) => {
-          const jam = new Date(r.scan_time)
-            .toLocaleTimeString("id-ID", {
-              hour: "2-digit",
-              minute: "2-digit",
-              timeZone: "Asia/Jakarta",
-            });
-
-          msg += `${i + 1}. ${r.name} — ${r.athlete_code} — ${jam}\n`;
-        });
-
-        msg += `\n👥 Total hadir: ${rows.length} atlet`;
-
-        await channel.send(msg);
+        
+        const grouped = groupByCoachKelas(rows);
+        const desc = buildRekapText(grouped);
+        const coaches = Object.keys(grouped).length;
+        const tanggal = formatTanggal();
+        
+        const embed = new EmbedBuilder()
+          .setColor(0x0ea5e9)
+          .setTitle("📋 Rekap Absen Latihan")
+          .setDescription(desc)
+          .addFields(
+            {
+              name: "📅 Tanggal",
+              value: tanggal,
+              inline: true,
+            },
+            {
+              name: "👥 Total Hadir",
+              value: `${rows.length} atlet`,
+              inline: true,
+            },
+            {
+              name: "🧑‍🏫 Coach",
+              value: `${coaches} coach`,
+              inline: true,
+            }
+          )
+          .setTimestamp();
+        
+        await channel.send({ embeds: [embed] });
 
         console.log("✅ Rekap otomatis terkirim.");
       } catch (err) {
