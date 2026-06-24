@@ -45,13 +45,19 @@ const BULAN_ID = [
 const HARI_ID = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
 
 function formatTanggal(d = new Date()) {
-  return `${HARI_ID[d.getDay()]}, ${d.getDate()} ${BULAN_ID[d.getMonth() + 1]} ${d.getFullYear()}`;
+  const wib = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  return `${HARI_ID[wib.getDay()]}, ${wib.getDate()} ${BULAN_ID[wib.getMonth() + 1]} ${wib.getFullYear()}`;
 }
 
 function formatJam(isoString) {
   return new Date(isoString).toLocaleTimeString("id-ID", {
-    hour: "2-digit", minute: "2-digit",
+    hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta",
   });
+}
+
+function parseTanggal(tgl) {
+  if (tgl instanceof Date) return tgl;
+  return new Date(tgl + "T12:00:00Z");
 }
 
 function groupByCoachKelas(rows) {
@@ -280,8 +286,9 @@ client.on("interactionCreate", async interaction => {
 
     const lines = [];
     for (const [tgl, tglRows] of Object.entries(perTanggal)) {
-      const d        = new Date(tgl + "T00:00:00");
-      const tglLabel = `${HARI_ID[d.getDay()]} ${d.getDate()} ${BULAN_ID[d.getMonth() + 1]}`;
+      const d        = parseTanggal(tgl);
+      const wib      = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+      const tglLabel = `${HARI_ID[wib.getDay()]} ${wib.getDate()} ${BULAN_ID[wib.getMonth() + 1]}`;
       const grouped  = groupByCoachKelas(tglRows);
       const coaches  = Object.keys(grouped)
         .map(c => {
