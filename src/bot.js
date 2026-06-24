@@ -59,9 +59,9 @@ function formatJam(isoString) {
 
 // Konversi nilai tanggal dari PostgreSQL (bisa Date object atau string) ke Date WIB
 function parseTanggal(tgl) {
-  if (tgl instanceof Date) return tgl;
-  // Format YYYY-MM-DD → parse sebagai UTC tengah hari supaya tidak geser hari
-  return new Date(tgl + "T12:00:00Z");
+  if (!tgl) return new Date();
+
+  return new Date(tgl);
 }
 
 function groupByCoachKelas(rows) {
