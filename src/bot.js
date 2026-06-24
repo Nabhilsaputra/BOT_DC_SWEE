@@ -35,10 +35,7 @@ const cron                              = require("node-cron");
 // ─── Inisialisasi client ──────────────────────────────────────────────────────
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-  ],
+  intents: [GatewayIntentBits.Guilds],
 });
 let botReady  = false;
 
