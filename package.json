@@ -1,7 +1,7 @@
 {
   "name": "klub-renang-absensi",
   "version": "2.1.0",
-  "description": "Sistem absensi QR Code klub renang dengan Discord bot \u2014 Railway + PostgreSQL",
+  "description": "Sistem absensi QR Code klub renang dengan Discord bot — Railway + PostgreSQL",
   "main": "src/server.js",
   "engines": {
     "node": ">=18"
@@ -10,13 +10,14 @@
     "start": "node src/server.js"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "pg": "^8.11.5",
-    "qrcode": "^1.5.3",
     "googleapis": "^140.0.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "pg": "^8.11.5",
+    "qrcode": "^1.5.3"
   }
 }
