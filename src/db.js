@@ -139,7 +139,7 @@ async function getMonthlyAttendance(year, month) {
             a.scan_time,
             a.coach,
             a.kelas,
-            (a.scan_time AT TIME ZONE 'Asia/Jakarta')::date AS tanggal
+            to_char(a.scan_time AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD') AS tanggal
      FROM   attendance a
      LEFT JOIN athletes t ON t.athlete_code = a.athlete_code
      WHERE  to_char(a.scan_time AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM') = $1
@@ -174,7 +174,7 @@ async function getAthleteAttendanceHistory(athleteCode, limit = 30) {
             a.scan_time,
             a.coach,
             a.kelas,
-            (a.scan_time AT TIME ZONE 'Asia/Jakarta')::date AS tanggal
+            to_char(a.scan_time AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD') AS tanggal
      FROM   attendance a
      LEFT JOIN athletes t ON t.athlete_code = a.athlete_code
      WHERE  a.athlete_code = $1
