@@ -724,11 +724,10 @@ async function sendAutoRekapToOwner() {
       .setTitle(`📊 Rekap Bulanan Otomatis — ${label}`)
       .setDescription(
         `Rekap absensi bulan **${label}** sudah otomatis ter-generate ke Google Sheets.
-
-` +
+      
+      ` +
         `**Tab yang dibuat:**
-${result.tabs.map(t => `• ${t}`).join("
-")}`
+${result.tabs.map(t => `• ${t}`).join("\n")}
       )
       .addFields({ name: "🔗 Buka Sheets", value: result.url })
       .setTimestamp()
