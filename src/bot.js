@@ -147,6 +147,19 @@ async function registerCommands() {
       .setName("atlet")
       .setDescription("Daftar semua atlet yang terdaftar dalam sistem"),
 
+    // /hadir-bulan
+    new SlashCommandBuilder()
+      .setName("hadir-bulan")
+      .setDescription("Ringkasan jumlah kehadiran per atlet dalam satu bulan")
+      .addIntegerOption(o =>
+        o.setName("bulan")
+         .setDescription("Nomor bulan 1–12 (default: bulan ini)")
+         .setMinValue(1).setMaxValue(12).setRequired(false))
+      .addIntegerOption(o =>
+        o.setName("tahun")
+         .setDescription("Tahun (default: tahun ini)")
+         .setMinValue(2020).setMaxValue(2100).setRequired(false)),
+
     // /bantuan
     new SlashCommandBuilder()
       .setName("bantuan")
@@ -455,6 +468,56 @@ client.on("interactionCreate", async interaction => {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // /hadir-bulan
+  // ══════════════════════════════════════════════════════════════════════════
+  if (commandName === "hadir-bulan") {
+    await interaction.deferReply();
+    const bulan = interaction.options.getInteger("bulan") || new Date().getMonth() + 1;
+    const tahun = interaction.options.getInteger("tahun") || new Date().getFullYear();
+    const rows  = await db.getMonthlyAttendance(tahun, bulan);
+    const label = `${BULAN_ID[bulan]} ${tahun}`;
+  
+    if (!rows.length) {
+      return interaction.editReply(`📅 Tidak ada data kehadiran untuk ${label}.`);
+    }
+  
+    // Hitung kehadiran per atlet
+    const perAtlet = {};
+    for (const r of rows) {
+      const key = r.athlete_code;
+      if (!perAtlet[key]) {
+        perAtlet[key] = { name: r.name || r.athlete_code, code: key, total: 0, kelas: {} };
+      }
+      perAtlet[key].total++;
+      perAtlet[key].kelas[r.kelas] = (perAtlet[key].kelas[r.kelas] || 0) + 1;
+    }
+  
+    // Urutkan dari kehadiran terbanyak
+    const sorted = Object.values(perAtlet).sort((a, b) => b.total - a.total);
+  
+    const lines = sorted.map((a, i) => {
+      const kelasList = Object.entries(a.kelas)
+        .map(([k, n]) => `${k}: ${n}x`)
+        .join(", ");
+      const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+      return `${medal} **${a.name}** — ${a.total}x hadir _(${kelasList})_`;
+    });
+  
+    const embed = new EmbedBuilder()
+      .setColor(0x0ea5e9)
+      .setTitle(`🏊 Kehadiran Bulanan — ${label}`)
+      .setDescription(lines.join("\n"))
+      .addFields(
+        { name: "Total Scan",  value: `${rows.length}`,   inline: true },
+        { name: "Atlet Aktif", value: `${sorted.length}`, inline: true },
+      )
+      .setFooter({ text: "Diurutkan dari kehadiran terbanyak" })
+      .setTimestamp();
+  
+    return interaction.editReply({ embeds: [embed] });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // /bantuan
   // ══════════════════════════════════════════════════════════════════════════
   if (commandName === "bantuan") {
@@ -487,6 +550,9 @@ client.on("interactionCreate", async interaction => {
           "",
           "`/riwayat <nama>`",
           "Riwayat kehadiran satu atlet (30 sesi terakhir).",
+          "",
+          "`/hadir-bulan [bulan] [tahun]`",
+          "Ranking kehadiran atlet dalam satu bulan.",
           "",
           "`/bantuan`",
           "Tampilkan pesan ini.",
