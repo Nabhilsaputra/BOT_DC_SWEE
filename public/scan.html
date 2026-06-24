@@ -564,12 +564,15 @@
         // 🔥 PILIH KAMERA YANG BUKAN OBS
         let cam =
           cameras.find(c =>
-            c.label && c.label.toLowerCase().includes("webcam")
+            c.label && c.label.toLowerCase().includes("back")
           ) ||
           cameras.find(c =>
-            c.label && !c.label.toLowerCase().includes("obs")
+            c.label && c.label.toLowerCase().includes("belakang")
           ) ||
-          cameras[0];
+          cameras.find(c =>
+            c.label && c.label.toLowerCase().includes("environment")
+          ) ||
+          cameras[cameras.length - 1];
 
         return scanner.start(
           cam.id,
