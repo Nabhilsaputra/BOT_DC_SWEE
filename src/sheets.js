@@ -91,13 +91,12 @@ async function writeRekapToSheet(sheets, tabName, sheetId, coachName, year, mont
   console.log("=== ATTENDANCE ROWS ===");
   
   for (const r of attendanceRows) {
-    console.log({
-      coach: r.coach,
-      kelas: r.kelas,
-      tanggal: r.tanggal,
-    });
+    const tgl =
+      r.tanggal instanceof Date
+        ? r.tanggal.getDate()
+        : new Date(r.tanggal).getDate();
   
-    const tgl = new Date(r.tanggal + "T12:00:00Z").getDate();
+    console.log("tgl:", tgl, "kelas:", r.kelas);
   
     if (dataPerTgl[tgl] && KELAS_LIST.includes(r.kelas)) {
       dataPerTgl[tgl][r.kelas]++;
