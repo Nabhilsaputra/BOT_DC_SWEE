@@ -3,303 +3,494 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#ffffff" />
   <title>Absensi — TMSC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     /* ── Reset & Base ───────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0a0f1e;
-      --surface:   #111827;
-      --surface2:  #1a2236;
-      --border:    #1e2d45;
-      --accent:    #0ea5e9;
-      --accent-dim:#0c4a6e;
-      --success:   #10b981;
-      --warn:      #f59e0b;
-      --error:     #f43f5e;
-      --text:      #f1f5f9;
-      --muted:     #64748b;
-      --muted2:    #94a3b8;
+      /* Palette — putih bersih dengan aksen teal "air kolam" & gold "prestasi" */
+      --bg:          #ffffff;
+      --surface:     #ffffff;
+      --line:        #e7edf1;
+      --line-soft:   #f0f4f6;
 
-      --radius-sm: 10px;
-      --radius:    16px;
-      --radius-lg: 22px;
+      --ink:         #142a38;
+      --ink-soft:    #5b7484;
+      --ink-faint:   #9fb0bc;
 
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --accent:      #0b7285;
+      --accent-2:    #084c5c;
+      --accent-soft: #e3f2f5;
+      --accent-soft2:#cfeaef;
+
+      --gold:        #b6862f;
+      --gold-soft:   #f7efdc;
+
+      --success:     #1c8c6e;
+      --success-soft:#e3f5ee;
+      --warn:        #b9802c;
+      --warn-soft:   #fbf1df;
+      --error:       #c0504d;
+      --error-soft:  #fbeaea;
+
+      --radius-sm: 12px;
+      --radius:    18px;
+      --radius-lg: 26px;
+
+      --shadow-sm: 0 1px 2px rgba(15,42,56,0.05), 0 1px 1px rgba(15,42,56,0.03);
+      --shadow-md: 0 10px 28px -10px rgba(15,42,56,0.14), 0 2px 8px -2px rgba(15,42,56,0.06);
+      --shadow-lg: 0 24px 48px -18px rgba(15,42,56,0.20);
+
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+      --font-display: "Fraunces", Georgia, serif;
+      --font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     html, body {
       height: 100%;
       background: var(--bg);
-      color: var(--text);
+      color: var(--ink);
       font-family: var(--font);
       -webkit-font-smoothing: antialiased;
     }
 
+    /* ── Ambient background — sangat halus, hanya sentuhan ─────────────── */
+    .bg-glow {
+      position: fixed;
+      pointer-events: none;
+      z-index: -1;
+      border-radius: 50%;
+      filter: blur(6px);
+    }
+    .bg-glow.glow-a {
+      top: -130px; right: -110px;
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, var(--accent-soft) 0%, rgba(227,242,245,0) 70%);
+      animation: breathe 9s ease-in-out infinite;
+    }
+    .bg-glow.glow-b {
+      bottom: -120px; left: -100px;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, var(--gold-soft) 0%, rgba(247,239,220,0) 70%);
+      animation: breathe 11s ease-in-out infinite 1.5s;
+    }
+    @keyframes breathe {
+      0%, 100% { opacity: .6;  transform: scale(1); }
+      50%      { opacity: .95; transform: scale(1.08); }
+    }
+
     /* ── Layout ─────────────────────────────────────────────────────────── */
     .app {
+      position: relative;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0 16px 40px;
+      padding: 0 16px 36px;
     }
 
     /* ── Header ─────────────────────────────────────────────────────────── */
     .header {
       width: 100%;
       max-width: 420px;
-      padding: 24px 0 20px;
+      padding: 28px 0 4px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
     .header-logo {
-      width: 44px;
-      height: 44px;
-      background: linear-gradient(135deg, #0ea5e9, #0284c7);
-      border-radius: 12px;
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(140deg, var(--accent), var(--accent-2));
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
       flex-shrink: 0;
+      box-shadow: var(--shadow-md);
+      animation: logoPop 0.55s var(--ease) both;
     }
-    .header-text { line-height: 1.2; }
+    .header-logo svg { width: 24px; height: 24px; }
+    @keyframes logoPop {
+      from { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+      to   { opacity: 1; transform: scale(1)   rotate(0deg); }
+    }
+    .header-text { line-height: 1.25; }
     .header-text h1 {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.3px;
+      font-family: var(--font-display);
+      font-size: 1.18rem;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.2px;
     }
     .header-text p {
-      font-size: 0.75rem;
-      color: var(--muted);
+      font-size: 0.78rem;
+      color: var(--ink-soft);
       margin-top: 2px;
+      transition: opacity 0.2s var(--ease);
     }
+
+    /* ── Wave divider — signature element ──────────────────────────────── */
+    .wave-divider {
+      width: 100%;
+      max-width: 420px;
+      height: 18px;
+      margin: 6px 0 22px;
+      overflow: hidden;
+    }
+    .wave-divider path {
+      fill: none;
+      stroke: url(#waveGrad);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-dasharray: 6 11;
+      animation: waveFlow 7s linear infinite;
+    }
+    @keyframes waveFlow { to { stroke-dashoffset: -136; } }
 
     /* ── Screen wrapper ──────────────────────────────────────────────────── */
     .screen {
       width: 100%;
       max-width: 420px;
-      animation: fadeIn 0.25s ease;
+      animation: screenIn 0.4s var(--ease);
     }
     .screen.hidden { display: none; }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
+    @keyframes screenIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.99); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
     }
 
     /* ── Step indicator ──────────────────────────────────────────────────── */
     .steps {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-bottom: 24px;
+      gap: 7px;
+      margin-bottom: 22px;
     }
     .step-dot {
+      position: relative;
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--border);
-      transition: all 0.3s;
+      background: var(--line);
+      transition: all 0.35s var(--ease);
     }
     .step-dot.active {
       background: var(--accent);
-      width: 24px;
-      border-radius: 4px;
+      width: 26px;
+      border-radius: 5px;
+      box-shadow: 0 0 0 4px var(--accent-soft);
     }
     .step-dot.done { background: var(--success); }
     .steps-label {
       margin-left: auto;
       font-size: 0.72rem;
-      color: var(--muted);
-      font-weight: 500;
+      color: var(--ink-faint);
+      font-weight: 600;
+      letter-spacing: 0.2px;
     }
 
     /* ── Cards ───────────────────────────────────────────────────────────── */
     .card {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 1px solid var(--line);
       border-radius: var(--radius);
       padding: 20px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
     }
+    .card:hover { box-shadow: var(--shadow-md); }
     .card-label {
-      font-size: 0.65rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1.2px;
-      color: var(--muted);
-      margin-bottom: 12px;
+      letter-spacing: 1.3px;
+      color: var(--ink-soft);
+      margin-bottom: 14px;
+    }
+    .card-label::before {
+      content: "";
+      width: 12px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--accent);
+      flex-shrink: 0;
     }
 
-    /* ── Coach input ─────────────────────────────────────────────────────── */
-    .input-field {
-      width: 100%;
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
+    /* ── Coach picker (pilih, tidak input manual) ─────────────────────────── */
+    .coach-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+    .coach-chip {
+      background: #fff;
+      border: 1.5px solid var(--line);
       border-radius: var(--radius-sm);
-      padding: 13px 14px;
-      color: var(--text);
-      font-size: 0.95rem;
+      padding: 12px 4px 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s var(--ease);
+      user-select: none;
       font-family: var(--font);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .input-field:focus {
+    .coach-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--line-soft);
+      color: var(--ink-faint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      transition: all 0.2s var(--ease);
+    }
+    .coach-name {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      letter-spacing: 0.1px;
+    }
+    .coach-chip:hover {
+      border-color: var(--accent-soft2);
+      transform: translateY(-1px);
+    }
+    .coach-chip.selected {
+      background: var(--accent-soft);
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
     }
-    .input-field::placeholder { color: var(--muted); }
+    .coach-chip.selected .coach-avatar { background: var(--accent); color: #fff; }
+    .coach-chip.selected .coach-name   { color: var(--accent); }
 
     /* ── Kelas chips ─────────────────────────────────────────────────────── */
     .chips {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      gap: 9px;
     }
     .chip {
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
+      background: #fff;
+      border: 1.5px solid var(--line);
       border-radius: var(--radius-sm);
-      padding: 12px 8px;
+      padding: 14px 6px 12px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.18s;
+      transition: all 0.2s var(--ease);
       user-select: none;
     }
-    .chip .chip-icon { font-size: 1.3rem; display: block; margin-bottom: 4px; }
+    .chip .chip-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-faint);
+      margin-bottom: 7px;
+      transition: color 0.2s var(--ease);
+    }
+    .chip .chip-icon svg { width: 22px; height: 22px; }
     .chip .chip-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted2);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--ink-soft);
       display: block;
+      letter-spacing: 0.1px;
     }
     .chip:hover {
-      border-color: var(--accent);
+      border-color: var(--accent-soft2);
+      transform: translateY(-1px);
     }
-    .chip.selected {
-      background: rgba(14,165,233,0.1);
-      border-color: var(--accent);
+    .chip.selected { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+
+    .chip[data-kelas="Pemula"].selected {
+      background: var(--accent-soft); border-color: var(--accent);
     }
-    .chip.selected .chip-label { color: var(--accent); }
+    .chip[data-kelas="Pemula"].selected .chip-icon,
+    .chip[data-kelas="Pemula"].selected .chip-label { color: var(--accent); }
+
+    .chip[data-kelas="Lanjutan"].selected {
+      background: var(--accent-soft2); border-color: var(--accent-2);
+    }
+    .chip[data-kelas="Lanjutan"].selected .chip-icon,
+    .chip[data-kelas="Lanjutan"].selected .chip-label { color: var(--accent-2); }
+
+    .chip[data-kelas="Prestasi"].selected {
+      background: var(--gold-soft); border-color: var(--gold);
+    }
+    .chip[data-kelas="Prestasi"].selected .chip-icon,
+    .chip[data-kelas="Prestasi"].selected .chip-label { color: var(--gold); }
 
     /* ── Primary button ──────────────────────────────────────────────────── */
     .btn-primary {
       width: 100%;
-      padding: 15px;
-      background: var(--accent);
+      padding: 16px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
       color: #fff;
-      font-size: 0.95rem;
+      font-size: 0.96rem;
       font-weight: 700;
       font-family: var(--font);
       border: none;
       border-radius: var(--radius-sm);
       cursor: pointer;
-      transition: all 0.18s;
+      transition: all 0.22s var(--ease);
       letter-spacing: 0.2px;
+      box-shadow: var(--shadow-sm);
     }
     .btn-primary:hover:not(:disabled) {
-      background: #38bdf8;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 20px rgba(14,165,233,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px -10px rgba(11,114,133,0.38);
     }
     .btn-primary:active:not(:disabled) { transform: translateY(0); }
     .btn-primary:disabled {
-      background: var(--border);
-      color: var(--muted);
+      background: var(--line-soft);
+      color: var(--ink-faint);
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     /* ── Session badge ───────────────────────────────────────────────────── */
     .session-badge {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
       border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      margin-bottom: 14px;
+      padding: 13px 15px;
+      margin-bottom: 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
+      box-shadow: var(--shadow-sm);
     }
-    .session-info { line-height: 1.55; }
+    .session-info { line-height: 1.6; }
     .session-info .row {
       font-size: 0.82rem;
-      color: var(--muted2);
+      color: var(--ink-soft);
     }
-    .session-info .row strong { color: var(--text); font-weight: 600; }
+    .session-info .row strong { color: var(--ink); font-weight: 700; }
     .btn-change {
       background: none;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.74rem;
+      font-weight: 600;
       font-family: var(--font);
-      color: var(--muted2);
+      color: var(--ink-soft);
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
-      transition: all 0.18s;
+      transition: all 0.2s var(--ease);
     }
-    .btn-change:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-change:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
-    /* ── QR Reader ───────────────────────────────────────────────────────── */
-    #reader {
+    /* ── QR Reader & scan frame ──────────────────────────────────────────── */
+    .scanner-frame {
+      position: relative;
       width: 100%;
       border-radius: var(--radius);
       overflow: hidden;
-      border: 2px solid var(--border);
-      background: var(--surface);
+      border: 1px solid var(--line);
+      background: var(--ink);
+      box-shadow: var(--shadow-md);
     }
+    #reader { width: 100%; }
     /* Override html5-qrcode default styling */
-    #reader video { border-radius: var(--radius) !important; }
+    #reader video { display: block; width: 100%; }
     #reader img { display: none; }
+
+    .frame-corner {
+      position: absolute;
+      width: 22px; height: 22px;
+      border: 2.5px solid #fff;
+      opacity: 0.85;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .frame-corner.tl { top: 12px; left: 12px; border-right: none; border-bottom: none; border-radius: 6px 0 0 0; }
+    .frame-corner.tr { top: 12px; right: 12px; border-left: none; border-bottom: none; border-radius: 0 6px 0 0; }
+    .frame-corner.bl { bottom: 12px; left: 12px; border-right: none; border-top: none; border-radius: 0 0 0 6px; }
+    .frame-corner.br { bottom: 12px; right: 12px; border-left: none; border-top: none; border-radius: 0 0 6px 0; }
+
+    .scan-line {
+      position: absolute;
+      left: 14%; right: 14%;
+      top: 18%;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(94,222,255,0.95), rgba(255,255,255,0));
+      border-radius: 2px;
+      z-index: 2;
+      pointer-events: none;
+      animation: scanSweep 2.6s ease-in-out infinite;
+    }
+    @keyframes scanSweep {
+      0%, 100% { top: 18%; opacity: 0.25; }
+      50%      { top: 76%; opacity: 0.9; }
+    }
 
     /* ── Result toast ────────────────────────────────────────────────────── */
     .result-box {
       margin-top: 14px;
-      padding: 14px 16px;
+      padding: 15px 16px;
       border-radius: var(--radius-sm);
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: var(--line-soft);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--ink-faint);
       text-align: center;
       font-size: 0.9rem;
-      font-weight: 500;
+      font-weight: 600;
+      color: var(--ink-soft);
       min-height: 52px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: all 0.25s;
+      transition: all 0.3s var(--ease);
       position: relative;
       overflow: hidden;
     }
     .result-box.state-ok {
-      background: rgba(16,185,129,0.08);
-      border-color: rgba(16,185,129,0.4);
-      color: #6ee7b7;
+      background: var(--success-soft);
+      border-color: var(--success-soft);
+      border-left-color: var(--success);
+      color: var(--success);
     }
     .result-box.state-warn {
-      background: rgba(245,158,11,0.08);
-      border-color: rgba(245,158,11,0.4);
-      color: #fcd34d;
+      background: var(--warn-soft);
+      border-color: var(--warn-soft);
+      border-left-color: var(--warn);
+      color: var(--warn);
     }
     .result-box.state-err {
-      background: rgba(244,63,94,0.08);
-      border-color: rgba(244,63,94,0.4);
-      color: #fda4af;
+      background: var(--error-soft);
+      border-color: var(--error-soft);
+      border-left-color: var(--error);
+      color: var(--error);
     }
 
     /* Ripple overlay */
     .ripple {
       position: absolute;
       border-radius: 50%;
-      background: rgba(16,185,129,0.25);
+      background: rgba(28,140,110,0.18);
       width: 0; height: 0;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
@@ -312,34 +503,75 @@
 
     /* ── Counter strip ───────────────────────────────────────────────────── */
     .counter-strip {
-      margin-top: 10px;
+      margin-top: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.75rem;
-      color: var(--muted);
+      font-size: 0.76rem;
+      color: var(--ink-faint);
     }
     .counter-strip .count {
       font-weight: 700;
       color: var(--success);
     }
     .counter-strip .last-id {
-      font-family: monospace;
+      font-family: "SF Mono", "Roboto Mono", monospace;
       font-size: 0.72rem;
+      background: var(--line-soft);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    /* ── Footer note ─────────────────────────────────────────────────────── */
+    .footer-note {
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      margin-top: 28px;
+      font-size: 0.7rem;
+      letter-spacing: 0.3px;
+      color: var(--ink-faint);
+    }
+
+    /* ── Reduced motion ──────────────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      .bg-glow, .wave-divider path, .scan-line, .header-logo { animation: none !important; }
+      .screen { animation: none !important; }
+      *, *::before, *::after { transition-duration: 0.01ms !important; }
     }
   </style>
 </head>
 <body>
 <div class="app">
+  <div class="bg-glow glow-a"></div>
+  <div class="bg-glow glow-b"></div>
 
   <!-- Header -->
   <div class="header">
-    <div class="header-logo">🏊</div>
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="17.2" cy="5.2" r="1.5" fill="#fff" stroke="none"/>
+        <path d="M2 9c1.5-1.3 3-1.3 4.5 0s3 1.3 4.5 0 3-1.3 4.5 0 3 1.3 4.5 0"/>
+        <path d="M2 14.3c1.5-1.3 3-1.3 4.5 0s3 1.3 4.5 0 3-1.3 4.5 0 3 1.3 4.5 0" opacity="0.55"/>
+      </svg>
+    </div>
     <div class="header-text">
       <h1>Absensi Klub TMSC</h1>
       <p id="headerSub">Pilih sesi sebelum mulai scan</p>
     </div>
   </div>
+
+  <!-- Wave divider (signature element) -->
+  <svg class="wave-divider" viewBox="0 0 420 18" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"  stop-color="#0b7285"/>
+        <stop offset="50%" stop-color="#b6862f"/>
+        <stop offset="100%" stop-color="#0b7285"/>
+      </linearGradient>
+    </defs>
+    <path d="M0 9 C 35 1, 70 17, 105 9 C 140 1, 175 17, 210 9 C 245 1, 280 17, 315 9 C 350 1, 385 17, 420 9" />
+  </svg>
 
   <!-- ════════════════════════════════════════════════════ -->
   <!-- SCREEN 1 — Pilih Sesi                              -->
@@ -355,32 +587,66 @@
 
     <!-- Coach -->
     <div class="card">
-      <div class="card-label">👤 Nama Coach</div>
-      <input
-        id="coachInput"
-        class="input-field"
-        type="text"
-        placeholder="Ketik nama coach yang bertugas..."
-        autocomplete="off"
-        autocapitalize="words"
-        spellcheck="false"
-      />
+      <div class="card-label">Pilih Coach</div>
+      <div class="coach-grid">
+        <button type="button" class="coach-chip" data-coach="Ahmad">
+          <span class="coach-avatar">A</span><span class="coach-name">Ahmad</span>
+        </button>
+        <button type="button" class="coach-chip" data-coach="Akmal">
+          <span class="coach-avatar">A</span><span class="coach-name">Akmal</span>
+        </button>
+        <button type="button" class="coach-chip" data-coach="Diah">
+          <span class="coach-avatar">D</span><span class="coach-name">Diah</span>
+        </button>
+        <button type="button" class="coach-chip" data-coach="Dinda">
+          <span class="coach-avatar">D</span><span class="coach-name">Dinda</span>
+        </button>
+        <button type="button" class="coach-chip" data-coach="Geri">
+          <span class="coach-avatar">G</span><span class="coach-name">Geri</span>
+        </button>
+        <button type="button" class="coach-chip" data-coach="Gilang">
+          <span class="coach-avatar">G</span><span class="coach-name">Gilang</span>
+        </button>
+        <button type="button" class="coach-chip" data-coach="Giri">
+          <span class="coach-avatar">G</span><span class="coach-name">Giri</span>
+        </button>
+        <button type="button" class="coach-chip" data-coach="Nesya">
+          <span class="coach-avatar">N</span><span class="coach-name">Nesya</span>
+        </button>
+        <button type="button" class="coach-chip" data-coach="Sadikin">
+          <span class="coach-avatar">S</span><span class="coach-name">Sadikin</span>
+        </button>
+      </div>
     </div>
 
     <!-- Kelas -->
     <div class="card">
-      <div class="card-label">🎽 Kelas</div>
+      <div class="card-label">Kelas</div>
       <div class="chips">
         <div class="chip" data-kelas="Pemula">
-          <span class="chip-icon">🟢</span>
+          <span class="chip-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+              <path d="M12 3c-3.5 4-6 7.2-6 10.5A6 6 0 0012 19a6 6 0 006-5.5C18 10.2 15.5 7 12 3z"/>
+            </svg>
+          </span>
           <span class="chip-label">Pemula</span>
         </div>
         <div class="chip" data-kelas="Lanjutan">
-          <span class="chip-icon">🔵</span>
+          <span class="chip-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M3 16c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>
+              <path d="M3 10c2-2 4-2 6 0s4 2 6 0 4-2 6 0" opacity="0.55"/>
+            </svg>
+          </span>
           <span class="chip-label">Lanjutan</span>
         </div>
         <div class="chip" data-kelas="Prestasi">
-          <span class="chip-icon">🏆</span>
+          <span class="chip-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+              <circle cx="12" cy="14.3" r="5"/>
+              <path d="M9 9.3L7 3M15 9.3l2-6.3"/>
+            </svg>
+          </span>
           <span class="chip-label">Prestasi</span>
         </div>
       </div>
@@ -414,7 +680,14 @@
     </div>
 
     <!-- QR reader -->
-    <div id="reader"></div>
+    <div class="scanner-frame">
+      <div id="reader"></div>
+      <span class="frame-corner tl"></span>
+      <span class="frame-corner tr"></span>
+      <span class="frame-corner bl"></span>
+      <span class="frame-corner br"></span>
+      <div class="scan-line"></div>
+    </div>
 
     <!-- Result -->
     <div class="result-box" id="resultBox">
@@ -429,6 +702,8 @@
 
   </div>
 
+  <div class="footer-note">Tirtamulya Swimming Club &middot; Sistem Absensi Digital</div>
+
 </div>
 
 <script>
@@ -442,7 +717,7 @@
   let lastScanMs    = 0;
 
   // ── DOM refs ─────────────────────────────────────────────────────────────────
-  const coachInput  = document.getElementById("coachInput");
+  const coachChips  = document.querySelectorAll(".coach-chip");
   const btnMulai    = document.getElementById("btnMulai");
   const btnGanti    = document.getElementById("btnGanti");
   const screenSel   = document.getElementById("screenSelect");
@@ -455,6 +730,16 @@
   const headerSub   = document.getElementById("headerSub");
   const chips       = document.querySelectorAll(".chip");
 
+  // ── Coach selection ──────────────────────────────────────────────────────────
+  coachChips.forEach(chip => {
+    chip.addEventListener("click", () => {
+      coachChips.forEach(c => c.classList.remove("selected"));
+      chip.classList.add("selected");
+      coach = chip.dataset.coach;
+      validate();
+    });
+  });
+
   // ── Chip selection ───────────────────────────────────────────────────────────
   chips.forEach(chip => {
     chip.addEventListener("click", () => {
@@ -463,11 +748,6 @@
       kelas = chip.dataset.kelas;
       validate();
     });
-  });
-
-  coachInput.addEventListener("input", () => {
-    coach = coachInput.value.trim();
-    validate();
   });
 
   function validate() {
