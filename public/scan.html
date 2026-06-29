@@ -230,57 +230,42 @@
       flex-shrink: 0;
     }
 
-    /* ── Coach picker (pilih, tidak input manual) ─────────────────────────── */
-    .coach-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 9px;
-    }
-    .coach-chip {
+    /* ── Coach picker (dropdown) ───────────────────────────────────────────── */
+    .select-wrap { position: relative; }
+    .select-field {
+      width: 100%;
       background: #fff;
       border: 1.5px solid var(--line);
       border-radius: var(--radius-sm);
-      padding: 12px 4px 11px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      transition: all 0.2s var(--ease);
-      user-select: none;
+      padding: 14px 40px 14px 15px;
+      color: var(--ink);
+      font-size: 0.95rem;
+      font-weight: 600;
       font-family: var(--font);
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
     }
-    .coach-avatar {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      background: var(--line-soft);
-      color: var(--ink-faint);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.78rem;
-      font-weight: 700;
-      transition: all 0.2s var(--ease);
-    }
-    .coach-name {
-      font-size: 0.74rem;
-      font-weight: 700;
-      color: var(--ink-soft);
-      letter-spacing: 0.1px;
-    }
-    .coach-chip:hover {
-      border-color: var(--accent-soft2);
-      transform: translateY(-1px);
-    }
-    .coach-chip.selected {
-      background: var(--accent-soft);
+    .select-field:invalid { color: var(--ink-faint); font-weight: 500; }
+    .select-field:focus {
       border-color: var(--accent);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 0 0 4px var(--accent-soft);
     }
-    .coach-chip.selected .coach-avatar { background: var(--accent); color: #fff; }
-    .coach-chip.selected .coach-name   { color: var(--accent); }
+    .select-wrap::after {
+      content: "";
+      position: absolute;
+      right: 16px; top: 50%;
+      width: 9px; height: 9px;
+      border-right: 2px solid var(--ink-faint);
+      border-bottom: 2px solid var(--ink-faint);
+      transform: translateY(-65%) rotate(45deg);
+      pointer-events: none;
+      transition: border-color 0.2s var(--ease);
+    }
+    .select-wrap:has(.select-field:focus)::after { border-color: var(--accent); }
+
 
     /* ── Kelas chips ─────────────────────────────────────────────────────── */
     .chips {
@@ -588,34 +573,19 @@
     <!-- Coach -->
     <div class="card">
       <div class="card-label">Pilih Coach</div>
-      <div class="coach-grid">
-        <button type="button" class="coach-chip" data-coach="Ahmad">
-          <span class="coach-avatar">A</span><span class="coach-name">Ahmad</span>
-        </button>
-        <button type="button" class="coach-chip" data-coach="Akmal">
-          <span class="coach-avatar">A</span><span class="coach-name">Akmal</span>
-        </button>
-        <button type="button" class="coach-chip" data-coach="Diah">
-          <span class="coach-avatar">D</span><span class="coach-name">Diah</span>
-        </button>
-        <button type="button" class="coach-chip" data-coach="Dinda">
-          <span class="coach-avatar">D</span><span class="coach-name">Dinda</span>
-        </button>
-        <button type="button" class="coach-chip" data-coach="Geri">
-          <span class="coach-avatar">G</span><span class="coach-name">Geri</span>
-        </button>
-        <button type="button" class="coach-chip" data-coach="Gilang">
-          <span class="coach-avatar">G</span><span class="coach-name">Gilang</span>
-        </button>
-        <button type="button" class="coach-chip" data-coach="Giri">
-          <span class="coach-avatar">G</span><span class="coach-name">Giri</span>
-        </button>
-        <button type="button" class="coach-chip" data-coach="Nesya">
-          <span class="coach-avatar">N</span><span class="coach-name">Nesya</span>
-        </button>
-        <button type="button" class="coach-chip" data-coach="Sadikin">
-          <span class="coach-avatar">S</span><span class="coach-name">Sadikin</span>
-        </button>
+      <div class="select-wrap">
+        <select id="coachSelect" class="select-field" required>
+          <option value="" disabled selected>— Pilih nama coach —</option>
+          <option value="Ahmad">Ahmad</option>
+          <option value="Akmal">Akmal</option>
+          <option value="Diah">Diah</option>
+          <option value="Dinda">Dinda</option>
+          <option value="Geri">Geri</option>
+          <option value="Gilang">Gilang</option>
+          <option value="Giri">Giri</option>
+          <option value="Nesya">Nesya</option>
+          <option value="Sadikin">Sadikin</option>
+        </select>
       </div>
     </div>
 
@@ -717,7 +687,6 @@
   let lastScanMs    = 0;
 
   // ── DOM refs ─────────────────────────────────────────────────────────────────
-  const coachChips  = document.querySelectorAll(".coach-chip");
   const btnMulai    = document.getElementById("btnMulai");
   const btnGanti    = document.getElementById("btnGanti");
   const screenSel   = document.getElementById("screenSelect");
@@ -729,15 +698,12 @@
   const lastIdEl    = document.getElementById("lastId");
   const headerSub   = document.getElementById("headerSub");
   const chips       = document.querySelectorAll(".chip");
+  const coachSelect = document.getElementById("coachSelect");
 
   // ── Coach selection ──────────────────────────────────────────────────────────
-  coachChips.forEach(chip => {
-    chip.addEventListener("click", () => {
-      coachChips.forEach(c => c.classList.remove("selected"));
-      chip.classList.add("selected");
-      coach = chip.dataset.coach;
-      validate();
-    });
+  coachSelect.addEventListener("change", () => {
+    coach = coachSelect.value;
+    validate();
   });
 
   // ── Chip selection ───────────────────────────────────────────────────────────
