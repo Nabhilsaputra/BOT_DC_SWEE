@@ -28,7 +28,7 @@ real-time serta rekap lengkap, dan rekap otomatis ter-export ke Google Sheets.
 
 ---
 
-## Deploy ke Railway
+## Deploy
 
 ### 1. Siapkan Repository
 
