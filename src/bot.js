@@ -34,6 +34,12 @@ const BULAN_ID = [
 
 const HARI_ID = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
 
+// ─── Channel tujuan rekap sheet otomatis ──────────────────────────────────────
+// Bisa di-override lewat .env (DISCORD_CHANNEL_REKAP_HARIAN / _BULANAN),
+// kalau tidak diset akan pakai ID default di bawah ini.
+const CHANNEL_REKAP_SHEET_HARIAN  = process.env.DISCORD_CHANNEL_REKAP_HARIAN  || "1519212880820437074";
+const CHANNEL_REKAP_SHEET_BULANAN = process.env.DISCORD_CHANNEL_REKAP_BULANAN || "1519206019366916148";
+
 function formatTanggal(d = new Date()) {
   const wib = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
   return `${HARI_ID[wib.getDay()]}, ${wib.getDate()} ${BULAN_ID[wib.getMonth() + 1]} ${wib.getFullYear()}`;
@@ -815,9 +821,58 @@ async function sendAttendanceLog({ name, code, coach, kelas, isDuplicate }) {
   }
 }
 
-// ─── Kirim rekap sheet otomatis ke Owner ─────────────────────────────────────
+// ─── Kirim rekap sheet HARIAN otomatis ke channel ────────────────────────────
+// Setiap akhir hari, data absensi 1 s/d hari-ini di-generate ulang ke Google
+// Sheets (tab bulan berjalan) lalu link-nya dikirim ke channel rekap harian.
 
-async function sendAutoRekapToOwner() {
+async function sendAutoRekapHarianToChannel() {
+  if (!botReady) return;
+
+  try {
+    const now   = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    const year  = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const today = now.getDate();
+    const label = `1–${today} ${BULAN_ID[month]} ${year}`;
+
+    console.log(`[CRON] Mengirim rekap sheet harian (${label}) ke channel...`);
+
+    const rows = await db.getMonthlyAttendance(year, month);
+    if (!rows.length) {
+      console.log("[CRON] Tidak ada data absensi hari ini, skip rekap sheet harian.");
+      return;
+    }
+
+    const result = await generateRekapSheet(rows, year, month, today);
+
+    const channel = await client.channels.fetch(CHANNEL_REKAP_SHEET_HARIAN);
+    if (!channel) {
+      console.error("[CRON] Channel rekap sheet harian tidak ditemukan.");
+      return;
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor(0x10b981)
+      .setTitle("📊 Rekap Sheet Harian Otomatis")
+      .setDescription(
+        `Rekap absensi **${label}** sudah otomatis ter-update di Google Sheets.\n\n` +
+        `**Tab yang dibuat/diperbarui:**\n${result.tabs.map(t => `• ${t}`).join("\n")}`
+      )
+      .addFields({ name: "🔗 Buka Sheets", value: result.url })
+      .setTimestamp()
+      .setFooter({ text: "Dikirim otomatis setiap akhir hari jam 23.55 WIB" });
+
+    await channel.send({ embeds: [embed] });
+    console.log("[CRON] Rekap sheet harian terkirim ke channel.");
+
+  } catch (err) {
+    console.error("[CRON] Gagal auto rekap sheet harian:", err.message);
+  }
+}
+
+// ─── Kirim rekap sheet BULANAN otomatis ke channel ───────────────────────────
+
+async function sendAutoRekapBulananToChannel() {
   if (!botReady) return;
 
   try {
@@ -826,7 +881,7 @@ async function sendAutoRekapToOwner() {
     const month = now.getMonth() + 1;
     const label = `${BULAN_ID[month]} ${year}`;
 
-    console.log(`[CRON] Mengirim rekap sheet ${label} ke Owner...`);
+    console.log(`[CRON] Mengirim rekap sheet bulanan ${label} ke channel...`);
 
     // Ambil data bulan ini
     const rows = await db.getMonthlyAttendance(year, month);
@@ -838,69 +893,61 @@ async function sendAutoRekapToOwner() {
     // Generate sheet
     const result = await generateRekapSheet(rows, year, month);
 
-    // Cari semua member dengan role Owner
-    const guildId = process.env.DISCORD_GUILD_ID;
-    if (!guildId) {
-      console.log("[CRON] DISCORD_GUILD_ID belum diset, skip kirim PM.");
+    const channel = await client.channels.fetch(CHANNEL_REKAP_SHEET_BULANAN);
+    if (!channel) {
+      console.error("[CRON] Channel rekap sheet bulanan tidak ditemukan.");
       return;
     }
-
-    const guild     = await client.guilds.fetch(guildId);
-    const ownerRole = guild.roles.cache.find(r => r.name.toLowerCase() === "owner");
-    if (!ownerRole) {
-      console.log("[CRON] Role 'owner' tidak ditemukan di server.");
-      return;
-    }
-
-    await guild.members.fetch();
-    const owners = guild.members.cache.filter(m => m.roles.cache.has(ownerRole.id));
 
     const embed = new EmbedBuilder()
       .setColor(0x7c3aed)
       .setTitle(`📊 Rekap Bulanan Otomatis — ${label}`)
       .setDescription(
-        `Rekap absensi bulan **${label}** sudah otomatis ter-generate ke Google Sheets.
-      
-      ` +
-        `**Tab yang dibuat:**
-${result.tabs.map(t => `• ${t}`).join("\n")}`
+        `Rekap absensi bulan **${label}** sudah otomatis ter-generate ke Google Sheets.\n\n` +
+        `**Tab yang dibuat:**\n${result.tabs.map(t => `• ${t}`).join("\n")}`
       )
       .addFields({ name: "🔗 Buka Sheets", value: result.url })
       .setTimestamp()
       .setFooter({ text: "Dikirim otomatis tiap akhir bulan jam 19.00 WIB" });
 
-    for (const [, member] of owners) {
-      try {
-        await member.send({ embeds: [embed] });
-        console.log(`[CRON] PM terkirim ke ${member.user.tag}`);
-      } catch (e) {
-        console.error(`[CRON] Gagal PM ke ${member.user.tag}:`, e.message);
-      }
-    }
+    await channel.send({ embeds: [embed] });
+    console.log("[CRON] Rekap sheet bulanan terkirim ke channel.");
 
   } catch (err) {
-    console.error("[CRON] Gagal auto rekap sheet:", err.message);
+    console.error("[CRON] Gagal auto rekap sheet bulanan:", err.message);
   }
 }
 
-// ─── Cron: akhir bulan jam 19.00 WIB ────────────────────────────────────────
-// Cron: detik menit jam tanggal bulan
-// "0 19 28-31 * *" → tiap tanggal 28–31 jam 12.00 UTC (= 19.00 WIB)
-// Dicek tambahan: hanya jalan kalau besok sudah bulan baru (= hari terakhir bulan)
+// ─── Cron: rekap sheet harian (23.55 WIB) & bulanan (akhir bulan 19.00 WIB) ──
+// Harian  : tiap hari jam 23.55 WIB → rekap sheet 1 s/d hari-ini.
+// Bulanan : "0 12 28-31 * *" → tiap tanggal 28–31 jam 12.00 UTC (= 19.00 WIB),
+//           dicek tambahan: hanya jalan kalau besok sudah bulan baru
+//           (= hari ini adalah hari terakhir bulan).
 
 function startCron() {
+  // Rekap sheet harian
+  cron.schedule(
+    "55 23 * * *",
+    async () => {
+      console.log("[CRON] Waktunya kirim rekap sheet harian.");
+      await sendAutoRekapHarianToChannel();
+    },
+    { timezone: "Asia/Jakarta" }
+  );
+
+  // Rekap sheet bulanan
   cron.schedule("0 12 28-31 * *", async () => {
     const now      = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     // Jalankan hanya kalau hari ini adalah hari terakhir bulan
     if (tomorrow.getMonth() !== now.getMonth()) {
-      console.log("[CRON] Hari terakhir bulan — kirim rekap otomatis.");
-      await sendAutoRekapToOwner();
+      console.log("[CRON] Hari terakhir bulan — kirim rekap sheet bulanan.");
+      await sendAutoRekapBulananToChannel();
     }
   }, { timezone: "UTC" });
 
-  console.log("✅ Cron rekap bulanan aktif (akhir bulan 19.00 WIB).");
+  console.log("✅ Cron rekap sheet aktif (harian 23.55 WIB & akhir bulan 19.00 WIB).");
 }
 
 // ─── Start ────────────────────────────────────────────────────────────────────
