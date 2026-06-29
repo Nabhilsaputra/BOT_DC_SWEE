@@ -1,4 +1,4 @@
-# Sistem Absensi Klub Renang — VPS Linux + Discord Bot
+# Sistem Absensi Klub Renang Discord Bot
 
 Sistem absensi berbasis QR Code untuk klub renang. Pelatih scan QR code atlet
 via kamera HP, data masuk ke database PostgreSQL, bot Discord menampilkan log
